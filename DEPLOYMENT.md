@@ -22,7 +22,7 @@ git commit -m "Initial commit of SolarSciencePortal 2.0"
 
 # Connect to your GitHub repository
 git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/solarscienceportal.git
+git remote add origin https://github.com/shivamtech9395/solarscienceportal.git
 git push -u origin main
 ```
 
