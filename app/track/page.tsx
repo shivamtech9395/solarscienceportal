@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 import { 
   Search, 
   Sun, 
@@ -22,7 +24,7 @@ import {
 } from 'lucide-react';
 import { Project, ProjectStage } from '@/types';
 
-export default function CustomerTrackPage() {
+function TrackContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('query') || '';
 
@@ -498,5 +500,21 @@ export default function CustomerTrackPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CustomerTrackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="text-center">
+            <p className="text-xs font-semibold text-slate-500">Loading installation tracker...</p>
+          </div>
+        </div>
+      }
+    >
+      <TrackContent />
+    </Suspense>
   );
 }
