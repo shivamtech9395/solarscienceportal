@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Lock, Mail, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -14,11 +14,11 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
 
   // If already logged in, redirect
-  if (isAdminAuthenticated) {
-    if (typeof window !== 'undefined') {
+  useEffect(() => {
+    if (isAdminAuthenticated) {
       router.push('/admin');
     }
-  }
+  }, [isAdminAuthenticated, router]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();

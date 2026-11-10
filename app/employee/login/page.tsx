@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { HardHat, Phone, KeyRound, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -14,11 +14,11 @@ export default function EmployeeLoginPage() {
   const [loading, setLoading] = useState(false);
 
   // If already logged in, redirect
-  if (currentEmployee) {
-    if (typeof window !== 'undefined') {
+  useEffect(() => {
+    if (currentEmployee) {
       router.push('/employee');
     }
-  }
+  }, [currentEmployee, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

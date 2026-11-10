@@ -20,7 +20,8 @@ import {
   ArrowRight,
   Star,
   MessageSquarePlus,
-  ThumbsUp
+  ThumbsUp,
+  X
 } from 'lucide-react';
 import { Project, ProjectStage } from '@/types';
 
@@ -401,15 +402,27 @@ function TrackContent() {
 
       {/* RATING & REVIEW MODAL */}
       {showRatingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-amber-200 text-slate-800">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-1">
-              <Star className="w-5 h-5 fill-amber-400 text-amber-500" />
-              Rate Our Solar Installation
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Your feedback is shared directly with management and the field technicians.
-            </p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-5 sm:p-8 shadow-2xl border border-amber-200 text-slate-800 my-auto">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Star className="w-5 h-5 fill-amber-400 text-amber-500" />
+                  Rate Our Solar Installation
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Your feedback is shared directly with management and the field technicians.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRatingModal(false)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             {reviewSubmitted ? (
               <div className="py-8 text-center text-emerald-600 space-y-2">

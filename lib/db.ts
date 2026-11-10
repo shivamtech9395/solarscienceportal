@@ -1,10 +1,20 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { Employee, Customer, Project, Notification, AuditLog, ProjectStage, Review } from '@/types';
 import { SOLAR_INSTALLATION_STAGES } from './constants';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DB_FILE = path.join(DATA_DIR, 'db.json');
+const IS_SERVERLESS = Boolean(process.env.VERCEL) || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
+const LOCAL_DATA_DIR = path.join(process.cwd(), 'data');
+const SEED_FILE = path.join(LOCAL_DATA_DIR, 'db.json');
+
+// On Vercel / serverless runtime, process.cwd() is read-only. We use os.tmpdir() (/tmp) which is writable.
+const DB_FILE = IS_SERVERLESS
+  ? path.join(os.tmpdir(), 'solarscience_db.json')
+  : path.join(LOCAL_DATA_DIR, 'db.json');
+
+// Global in-memory cache to guarantee persistence and instantaneous response
+let memoryDb: DatabaseSchema | null = null;
 
 interface DatabaseSchema {
   employees: Employee[];
@@ -305,33 +315,55 @@ function getInitialData(): DatabaseSchema {
 }
 
 function ensureDataFile(): DatabaseSchema {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (memoryDb) {
+    return memoryDb;
   }
 
-  if (!fs.existsSync(DB_FILE)) {
-    const initial = getInitialData();
-    fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf-8');
-    return initial;
+  // 1. Try reading existing active DB file (e.g. /tmp/solarscience_db.json or data/db.json)
+  if (fs.existsSync(DB_FILE)) {
+    try {
+      const raw = fs.readFileSync(DB_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (!parsed.reviews) parsed.reviews = [];
+      memoryDb = parsed;
+      return memoryDb!;
+    } catch (e) {
+      console.warn('Failed to parse DB_FILE, attempting seed fallback', e);
+    }
   }
 
-  try {
-    const raw = fs.readFileSync(DB_FILE, 'utf-8');
-    const parsed = JSON.parse(raw);
-    if (!parsed.reviews) parsed.reviews = [];
-    return parsed;
-  } catch (e) {
-    const initial = getInitialData();
-    fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf-8');
-    return initial;
+  // 2. Try reading bundled seed file if DB file does not exist yet
+  if (fs.existsSync(SEED_FILE)) {
+    try {
+      const raw = fs.readFileSync(SEED_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (!parsed.reviews) parsed.reviews = [];
+      memoryDb = parsed;
+      saveData(parsed);
+      return memoryDb!;
+    } catch (e) {
+      console.warn('Failed to parse SEED_FILE', e);
+    }
   }
+
+  // 3. Fallback to programmatic initial data
+  const initial = getInitialData();
+  memoryDb = initial;
+  saveData(initial);
+  return memoryDb;
 }
 
 function saveData(data: DatabaseSchema) {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  memoryDb = data;
+  try {
+    const dir = path.dirname(DB_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('Filesystem write notice (using memory cache fallback):', err);
   }
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 export const db = {

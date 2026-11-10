@@ -16,7 +16,9 @@ import {
   Lock,
   UserCheck,
   Star,
-  ArrowLeft
+  ArrowLeft,
+  X,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Employee } from '@/types';
@@ -29,6 +31,8 @@ export default function EmployeeManagementPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [search, setSearch] = useState('');
 
   const [formData, setFormData] = useState({
@@ -74,6 +78,8 @@ export default function EmployeeManagementPage() {
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitLoading(true);
+    setSubmitError('');
     try {
       const res = await fetch('/api/employees', {
         method: 'POST',
@@ -90,10 +96,15 @@ export default function EmployeeManagementPage() {
           employeeCode: '',
           pin: '1234'
         });
-        fetchEmployees();
+        await fetchEmployees();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setSubmitError(err.error || 'Failed to add employee. Please check details.');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setSubmitError(err.message || 'Network error while adding employee.');
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
@@ -208,15 +219,37 @@ export default function EmployeeManagementPage() {
 
       {/* ADD EMPLOYEE MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl bg-white border border-amber-200 shadow-2xl p-6 text-slate-800">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-1">
-              <Plus className="w-5 h-5 text-amber-500" />
-              Add Technical Staff
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Enter details to configure technician mobile workspace access.
-            </p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-white border border-amber-200 shadow-2xl p-5 sm:p-6 text-slate-800 my-auto">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-amber-500" />
+                  Add Technical Staff
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Enter details to configure technician mobile workspace access.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddModal(false);
+                  setSubmitError('');
+                }}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {submitError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{submitError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleAddEmployee} className="space-y-3.5">
               <div>
@@ -282,15 +315,16 @@ export default function EmployeeManagementPage() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20"
+                  disabled={submitLoading}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20 cursor-pointer disabled:opacity-50"
                 >
-                  Save Staff Member
+                  {submitLoading ? 'Saving Staff...' : 'Save Staff Member'}
                 </button>
               </div>
             </form>

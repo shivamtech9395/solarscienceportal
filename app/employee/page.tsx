@@ -20,7 +20,8 @@ import {
   Square,
   Sparkles,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Project, Notification, ProjectStage, AuditLog } from '@/types';
@@ -504,15 +505,30 @@ export default function EmployeePortalPage() {
 
       {/* MODAL: SUBMIT STAGE PROGRESS & PHOTO PROOF */}
       {activeProject && activeStage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-lg rounded-3xl bg-white border border-amber-200 shadow-2xl p-6 text-slate-800 my-8">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-1">
-              <Camera className="w-5 h-5 text-amber-500" />
-              Submit Milestone Verification Proof
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Project: <strong className="text-slate-900">{activeProject.projectCode}</strong> • Stage {activeStage.stageNumber}: {activeStage.title}
-            </p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-white border border-amber-200 shadow-2xl p-5 sm:p-6 text-slate-800 my-auto">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-amber-500" />
+                  Submit Milestone Verification Proof
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Project: <strong className="text-slate-900">{activeProject.projectCode}</strong> • Stage {activeStage.stageNumber}: {activeStage.title}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveProject(null);
+                  setActiveStage(null);
+                }}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             {updateSuccess ? (
               <div className="p-6 text-center text-emerald-600 space-y-2">

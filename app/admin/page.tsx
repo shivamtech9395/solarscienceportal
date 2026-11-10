@@ -23,7 +23,8 @@ import {
   LogOut,
   ShieldCheck,
   Star,
-  History
+  History,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Project, Employee, Review } from '@/types';
@@ -39,9 +40,15 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modals
+  // Modals & form processing
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState('');
+
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignError, setAssignError] = useState('');
+
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedStageNumber, setSelectedStageNumber] = useState<number>(1);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
@@ -113,6 +120,8 @@ export default function AdminDashboard() {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCreateLoading(true);
+    setCreateError('');
     try {
       const res = await fetch('/api/projects', {
         method: 'POST',
@@ -135,10 +144,15 @@ export default function AdminDashboard() {
           contractValue: '240000',
           notes: ''
         });
-        fetchData();
+        await fetchData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setCreateError(err.error || 'Failed to create contract. Please verify fields.');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setCreateError(err.message || 'Network error while creating project.');
+    } finally {
+      setCreateLoading(false);
     }
   };
 
@@ -149,6 +163,7 @@ export default function AdminDashboard() {
     const matching = employees.find(e => e.role === stage?.requiredRole);
     setSelectedEmployeeId(matching ? matching.id : (employees[0]?.id || ''));
     setAssignmentSuccess(null);
+    setAssignError('');
     setShowAssignModal(true);
   };
 
@@ -156,6 +171,8 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!selectedProject || !selectedEmployeeId) return;
 
+    setAssignLoading(true);
+    setAssignError('');
     try {
       const res = await fetch('/api/stages/assign', {
         method: 'POST',
@@ -176,10 +193,15 @@ export default function AdminDashboard() {
           employeeName: emp?.name || 'Technician',
           stageTitle: stage?.title || `Stage ${selectedStageNumber}`
         });
-        fetchData();
+        await fetchData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setAssignError(err.error || 'Failed to assign technician.');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setAssignError(err.message || 'Network error while assigning technician.');
+    } finally {
+      setAssignLoading(false);
     }
   };
 
@@ -475,15 +497,38 @@ export default function AdminDashboard() {
 
       {/* ASSIGN MODAL WITH IN-APP ALERT & WHATSAPP DISPATCH */}
       {showAssignModal && selectedProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-3xl bg-white border border-amber-200 shadow-2xl p-6 text-slate-800">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-1">
-              <Send className="w-5 h-5 text-amber-500" />
-              Assign Milestone & Dispatch Alert
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Project: <strong className="text-slate-900">{selectedProject.projectCode}</strong> ({selectedProject.customer?.name} - {selectedProject.systemCapacityKW} kW)
-            </p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-white border border-amber-200 shadow-2xl p-5 sm:p-6 text-slate-800 my-auto">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Send className="w-5 h-5 text-amber-500" />
+                  Assign Milestone & Dispatch Alert
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Project: <strong className="text-slate-900">{selectedProject.projectCode}</strong> ({selectedProject.customer?.name} - {selectedProject.systemCapacityKW} kW)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAssignModal(false);
+                  setAssignError('');
+                  setAssignmentSuccess(null);
+                }}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {assignError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{assignError}</span>
+              </div>
+            )}
 
             {assignmentSuccess ? (
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 mb-4">
@@ -511,11 +556,12 @@ export default function AdminDashboard() {
 
                 <div className="mt-4 flex justify-end">
                   <button
+                    type="button"
                     onClick={() => {
                       setShowAssignModal(false);
                       setAssignmentSuccess(null);
                     }}
-                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold"
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
                   >
                     Done & Close
                   </button>
@@ -554,15 +600,16 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => setShowAssignModal(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+                    disabled={assignLoading}
+                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer disabled:opacity-50"
                   >
-                    <Send className="w-3.5 h-3.5" /> Confirm & Send Alert
+                    <Send className="w-3.5 h-3.5" /> {assignLoading ? 'Assigning...' : 'Confirm & Send Alert'}
                   </button>
                 </div>
               </form>
@@ -573,15 +620,37 @@ export default function AdminDashboard() {
 
       {/* CREATE NEW PROJECT MODAL */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-xl rounded-3xl bg-white border border-amber-200 shadow-2xl p-6 text-slate-800 my-8">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-1">
-              <Sun className="w-5 h-5 text-amber-500" />
-              Register New Rooftop Solar Contract
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Creates customer record and generates all 8 standard installation milestones.
-            </p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white border border-amber-200 shadow-2xl p-5 sm:p-6 text-slate-800 my-auto">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Sun className="w-5 h-5 text-amber-500" />
+                  Register New Rooftop Solar Contract
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Creates customer record and generates all 8 standard installation milestones.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setCreateError('');
+                }}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {createError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{createError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleCreateProject} className="space-y-3.5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -657,15 +726,16 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20"
+                  disabled={createLoading}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20 cursor-pointer disabled:opacity-50"
                 >
-                  Create Contract & Milestones
+                  {createLoading ? 'Creating Contract...' : 'Create Contract & Milestones'}
                 </button>
               </div>
             </form>
