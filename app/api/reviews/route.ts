@@ -17,7 +17,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { projectId, rating, tags, comment } = body;
+    const { projectId, rating, tags, comment, project } = body;
 
     if (!projectId || !rating) {
       return NextResponse.json(
@@ -30,7 +30,8 @@ export async function POST(req: Request) {
       projectId,
       rating: parseInt(rating, 10),
       tags: tags || ['Good Installation'],
-      comment: comment || 'Solar system installed satisfactorily.'
+      comment: comment || 'Solar system installed satisfactorily.',
+      project
     });
 
     return NextResponse.json(review, { status: 201 });

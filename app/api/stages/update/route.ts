@@ -13,6 +13,7 @@ export async function POST(req: Request) {
       markCompleted,
       checklist,
       metrics,
+      project,
     } = body;
 
     if (!projectId || !stageNumber || !employeeId || !remarks) {
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
       markCompleted: Boolean(markCompleted),
       checklist,
       metrics,
+      project,
     });
 
     return NextResponse.json({

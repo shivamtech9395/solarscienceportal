@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { projectId, stageNumber, employeeId } = body;
+    const { projectId, stageNumber, employeeId, project } = body;
 
     if (!projectId || !stageNumber || !employeeId) {
       return NextResponse.json(
@@ -17,6 +17,7 @@ export async function POST(req: Request) {
       projectId,
       stageNumber: parseInt(stageNumber, 10),
       employeeId,
+      project,
     });
 
     const emp = db.getEmployees().find((e) => e.id === employeeId);

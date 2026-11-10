@@ -24,7 +24,9 @@ import {
   ShieldCheck,
   Star,
   History,
-  X
+  X,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Project, Employee, Review } from '@/types';
@@ -59,6 +61,35 @@ export default function AdminDashboard() {
     employeeName: string;
     stageTitle: string;
   } | null>(null);
+
+  // WhatsApp Alert state for customer upon project creation
+  const [createdCustomerAlert, setCreatedCustomerAlert] = useState<{
+    customerName: string;
+    customerPhone: string;
+    projectCode: string;
+    whatsappUrl: string;
+    trackingUrl: string;
+  } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const getCustomerWhatsappUrl = (p: Project) => {
+    const rawPhone = p.customer?.phone || '';
+    const cleanPhone = rawPhone.replace(/\D/g, '');
+    const norm = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
+    const trackingUrl = `https://solarscienceportal-v1.vercel.app/track?query=${encodeURIComponent(norm)}`;
+    const msg = encodeURIComponent(
+      `☀️ *SolarScience Live Tracker Update*\n\n` +
+      `Namaste *${p.customer?.name || 'Customer'}* ji! 🙏\n\n` +
+      `Aapke Rooftop Solar Project *${p.projectCode}* (${p.systemCapacityKW} kW) ka current status:\n` +
+      `⚡ *Current Milestone*: Stage ${p.currentStageNumber} of 8\n` +
+      `📍 *Site Address*: ${p.customer?.address || ''}\n\n` +
+      `Aap live updates, installation checklist aur rooftop photos is link par dekh sakte hain:\n` +
+      `🔗 ${trackingUrl}\n\n` +
+      `Kisi bhi sahayata ke liye helpline: 1800-889-SOLAR\n` +
+      `_SolarScience Portal EPC Operations_`
+    );
+    return `https://wa.me/91${norm}?text=${msg}`;
+  };
 
   // Form State for new project
   const [newProject, setNewProject] = useState({
@@ -129,7 +160,16 @@ export default function AdminDashboard() {
         body: JSON.stringify(newProject)
       });
       if (res.ok) {
+        const createdData = await res.json();
         setShowCreateModal(false);
+        setProjects((prev) => [createdData, ...prev]);
+        setCreatedCustomerAlert({
+          customerName: createdData.customer?.name || newProject.customerName,
+          customerPhone: createdData.customer?.phone || newProject.customerPhone,
+          projectCode: createdData.projectCode,
+          whatsappUrl: createdData.customerWhatsappUrl,
+          trackingUrl: createdData.trackingUrl
+        });
         setNewProject({
           customerName: '',
           customerPhone: '',
@@ -180,7 +220,8 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           projectId: selectedProject.id,
           stageNumber: selectedStageNumber,
-          employeeId: selectedEmployeeId
+          employeeId: selectedEmployeeId,
+          project: selectedProject
         })
       });
 
@@ -193,6 +234,9 @@ export default function AdminDashboard() {
           employeeName: emp?.name || 'Technician',
           stageTitle: stage?.title || `Stage ${selectedStageNumber}`
         });
+        if (data.project) {
+          setProjects(prev => prev.map(p => p.id === data.project.id ? data.project : p));
+        }
         await fetchData();
       } else {
         const err = await res.json().catch(() => ({}));
@@ -361,15 +405,27 @@ export default function AdminDashboard() {
                         {project.customer?.name}
                       </h3>
 
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1.5">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500 mt-1.5">
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5 text-slate-400" />
                           {project.customer?.address}, {project.customer?.city}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Phone className="w-3.5 h-3.5 text-slate-400" />
-                          {project.customer?.phone}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3.5 h-3.5 text-slate-400" />
+                            {project.customer?.phone}
+                          </span>
+                          <a
+                            href={getCustomerWhatsappUrl(project)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300 transition-colors ml-1"
+                            title="Send Live Tracking on WhatsApp"
+                          >
+                            <MessageSquareShare className="w-3 h-3 text-emerald-600" />
+                            WhatsApp Tracking
+                          </a>
+                        </div>
                         <span className="flex items-center gap-1">
                           <Sun className="w-3.5 h-3.5 text-amber-500" />
                           {project.panelType}
@@ -739,6 +795,86 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOMER REGISTRATION WHATSAPP DISPATCH MODAL */}
+      {createdCustomerAlert && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-white border border-emerald-300 shadow-2xl p-5 sm:p-6 text-slate-800 my-auto animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Solar Contract Registered!
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Project Code: <strong className="font-mono text-slate-900">{createdCustomerAlert.projectCode}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCreatedCustomerAlert(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs mb-4 space-y-1.5">
+              <p className="font-bold text-emerald-950 flex items-center gap-1.5">
+                <MessageSquareShare className="w-4 h-4 text-emerald-600 shrink-0" />
+                Customer Live Tracking Alert via WhatsApp:
+              </p>
+              <p className="text-slate-600">
+                Customer <strong>{createdCustomerAlert.customerName}</strong> ({createdCustomerAlert.customerPhone}) ko unka tracking link WhatsApp par bhejne ke liye niche button par click karein:
+              </p>
+            </div>
+
+            {/* Tracking Link display & Copy Button */}
+            <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between gap-2">
+              <div className="truncate text-slate-600 font-mono text-[11px]">
+                {createdCustomerAlert.trackingUrl}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(createdCustomerAlert.trackingUrl);
+                  setCopiedLink(true);
+                  setTimeout(() => setCopiedLink(false), 2000);
+                }}
+                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-[11px] shrink-0 flex items-center gap-1 cursor-pointer"
+              >
+                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedLink ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              <a
+                href={createdCustomerAlert.whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+              >
+                <MessageSquareShare className="w-4 h-4" />
+                Send Tracking Details to Customer on WhatsApp
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setCreatedCustomerAlert(null)}
+                className="w-full py-2.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Done & View Project in Pipeline
+              </button>
+            </div>
           </div>
         </div>
       )}

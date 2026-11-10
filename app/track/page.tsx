@@ -92,7 +92,8 @@ function TrackContent() {
           projectId: project.id,
           rating: ratingVal,
           tags: selectedTags,
-          comment: reviewComment || 'Great solar installation service!'
+          comment: reviewComment || 'Great solar installation service!',
+          project: project
         })
       });
 

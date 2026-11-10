@@ -158,7 +158,8 @@ export default function EmployeePortalPage() {
           remarks,
           photoUrl: photoUrl || samplePhotos[0].url,
           markCompleted: markComplete,
-          checklist
+          checklist,
+          project: activeProject
         })
       });
 
